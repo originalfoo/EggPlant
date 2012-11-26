@@ -19,21 +19,22 @@ void (function TestAPI(_global) {
 		ver : 1.2
 	};
 
-	if (_global.hasOwnProperty("Check")) {	
+	var CheckAvailable = _global.hasOwnProperty("Check"); // is dependency checker installed?
+
+	if (CheckAvailable) {
 	
 		var dependencies = {
 			"APIs/Util.js": Check.ANY_VERSION
 		}
-
-		Check.required(dependencies, self);
 		
+		Check.required(dependencies, self);
 	}
 
 	// /////////////////////////////////////////////////////////////////
 	// CONFIG - OUTPUT METHODS
 	// Tests the Test API! Note: Will always generate some failed results.
 
-	if (_global.hasOwnProperty("Check")) {
+	if (CheckAvailable) {
 		Check.doWhen(
 			{}, self,
 			"Config/Test.basicOutput.js", // summary, console, debug, host, log
@@ -51,7 +52,7 @@ void (function TestAPI(_global) {
 	// DIANOSTIC ROUTINES
 	// https://warzone.atlassian.net/wiki/display/EGG/Test+API+Diagnostics
 	
-	if (_global.hasOwnProperty("Check")) {
+	if (CheckAvailable) {
 		Check.doWhen(
 			{"APIs/Diag.js": Check.ANY_VERSION},
 			self,
@@ -64,7 +65,7 @@ void (function TestAPI(_global) {
 	// TEST ROUTINES
 	// Tests the Test API! Note: Will always generate some failed results.
 	
-	if (_global.hasOwnProperty("Check")) {
+	if (CheckAvailable) {
 		Check.doWhen(
 			{}, self,
 			"Tests/Test.js",
@@ -307,7 +308,12 @@ void (function TestAPI(_global) {
 
 	makeConst( UnitTest.prototype, "hasNative",
 		function( key, message ) {
-			var passed = _global.hasOwnProperty(key);
+			var passed;
+			if (_global.hasOwnProperty("Define")) { // use Define API
+				passed = Define.hasNative(key);
+			} else { // do basic check
+				passed = _global.hasOwnProperty(key);
+			}
 			return unitTestResult.call(this, passed, true, passed, message, "hasNative");
 		}
 	);
@@ -989,6 +995,6 @@ void (function TestAPI(_global) {
 	// /////////////////////////////////////////////////////////////////
 	// INTERNAL: CONFIRM API AVAILABILITY
 
-	if (_global.hasOwnProperty("Check")) Check.provide(self);
+	if (CheckAvailable) Check.provide(self);
 
 })(this);
