@@ -145,8 +145,8 @@ void (function ConfigTest(_global) {
 		}
 	}
 	Test.outputTo = {
-		name  : "debug",
-		method: debugFn
+		name  : "log",
+		method: logFn
 	}
 
 	// /////////////////////////////////////////////////////////////////
