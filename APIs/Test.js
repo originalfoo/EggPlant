@@ -30,20 +30,7 @@ void (function TestAPI(_global) {
 	}
 
 	// /////////////////////////////////////////////////////////////////
-	// DIANOSTIC ROUTINES
-	// https://warzone.atlassian.net/wiki/display/EGG/Test+API+Diagnostics
-	
-	if (_global.hasOwnProperty("Check")) {
-		Check.doWhen(
-			{"APIs/Diag.js": Check.ANY_VERSION},
-			self,
-			"Diags/Test.js",
-			Check.LAZY_LOAD
-		);
-	}
-
-	// /////////////////////////////////////////////////////////////////
-	// TEST OUTPUT METHODS
+	// CONFIG - OUTPUT METHODS
 	// Tests the Test API! Note: Will always generate some failed results.
 
 	if (_global.hasOwnProperty("Check")) {
@@ -56,6 +43,19 @@ void (function TestAPI(_global) {
 		Check.doWhen(
 			{}, self,
 			"Config/Test.htmlOutput.js", // html
+			Check.LAZY_LOAD
+		);
+	}
+
+	// /////////////////////////////////////////////////////////////////
+	// DIANOSTIC ROUTINES
+	// https://warzone.atlassian.net/wiki/display/EGG/Test+API+Diagnostics
+	
+	if (_global.hasOwnProperty("Check")) {
+		Check.doWhen(
+			{"APIs/Diag.js": Check.ANY_VERSION},
+			self,
+			"Diags/Test.js",
 			Check.LAZY_LOAD
 		);
 	}
