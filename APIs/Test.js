@@ -16,7 +16,7 @@ void (function TestAPI(_global) {
 
 	var self = {
 		file: "APIs/Test.js",
-		ver : 1.2
+		ver : 1.3
 	};
 
 	var CheckAvailable = _global.hasOwnProperty("Check"); // is dependency checker installed?
@@ -89,7 +89,13 @@ void (function TestAPI(_global) {
 	// INTERNAL: CONSTANTS
 	// Can't define const in a function in current WZ JS env, hence vars :s
 
-	var COMMENT     = true;  // makes unitTestResult() treat the result as a non-state-affecting comment
+	var COMMENT   = true;  // makes unitTestResult() treat the result as a non-state-affecting comment
+	
+	var DIFFERENT = true;  // used by deepEq() and similar()
+	var SAME      = false; // used by deepEq() and similar()
+
+	var FAILED    = false; // used by deepEq() and similar()
+	var PASSED    = true;  // used by deepEq() and similar()
 	
 	// /////////////////////////////////////////////////////////////////
 	// INTERNAL: TEST MANAGEMENT VARS
@@ -119,8 +125,8 @@ void (function TestAPI(_global) {
 	}
 
 	// /////////////////////////////////////////////////////////////////
-	// INTERNAL: INHERIT ERROR SUPERCLASS
-	// Used by signal classes below
+	// INTERNAL: SIGNAL HELPERS
+	// Used by signal classes (see later)
 
 	var construct = function() {}; // re-usable constructor for inheritance
 
@@ -130,14 +136,18 @@ void (function TestAPI(_global) {
 		Signal.prototype.constructor = Signal;
 	}
 	
+	var instantiateSignal = function(message, name, signal) { // scoped to signal instance
+		makeConst(this, "message", message);
+		makeConst(this, "name"   , name   );
+		makeConst(this, "signal" , signal );
+	}
+
 	// /////////////////////////////////////////////////////////////////
 	// INTERNAL: ABORT SIGNAL
 	// Based on Error, used to abort a test (setting test.pased = false)
 
 	var AbortSignal = function AbortSignal(message) {
-		makeConst(this, "message", message      );
-		makeConst(this, "name"   , "AbortSignal");
-		makeConst(this, "signal" , "ABORT"      );
+		instantiateSignal.call(this, message, "AbortSignal", "ABORT");
 	}
 	inheritError(AbortSignal);
 
@@ -146,9 +156,7 @@ void (function TestAPI(_global) {
 	// Based on Error, used to finish a test (does not affect test.passed)
 
 	var FinishSignal = function FinishSignal(message) {
-		makeConst(this, "message", message       );
-		makeConst(this, "name"   , "FinishSignal");
-		makeConst(this, "signal" , "FINISH"      );
+		instantiateSignal.call(this, message, "FinishSignal", "FINISH");
 	}
 	inheritError(FinishSignal);
 
@@ -157,9 +165,7 @@ void (function TestAPI(_global) {
 	// Based on Error, used to abort test due to requirements failure (marks test as failed in process)
 
 	var RequireSignal = function RequireSignal(message) {
-		makeConst(this, "message", message        );
-		makeConst(this, "name"   , "RequireSignal");
-		makeConst(this, "signal" , "REQUIRE"      );
+		instantiateSignal.call(this, message, "RequireSignal", "REQUIRE");
 	}
 	inheritError(RequireSignal);
 
@@ -177,12 +183,26 @@ void (function TestAPI(_global) {
 	// INTERNAL: TYPEOF
 	// Simplified version of typeOf() in case Util API not installed
 
-	if (typeof _global.typeOf == "undefined") {
+	if (!_global.hasOwnProperty("typeOf")) {
 		var typeOf = function(obj) {
 			if (!arguments.length) obj = this;
+			if (obj === null) return "null";
 			if (obj === _global) return "global";
 			return Object.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
 		};
+	}
+
+	// /////////////////////////////////////////////////////////////////
+	// INTERNAL: COMPARE REGEXP
+	// Is regexp A same as regexp B?
+	
+	var compareRegexp = function(a, b) {
+		return ( typeOf(a[key])       ==  typeOf(b[key])
+				 && a[key].source     === b[key].source
+				 && a[key].global     === b[key].global
+				 && a[key].ignoreCase === b[key].ignoreCase
+				 && a[key].multiline  === b[key].multiline
+				 && a[key].sticky     === b[key].sticky     );
 	}
 
 	// /////////////////////////////////////////////////////////////////
@@ -192,11 +212,10 @@ void (function TestAPI(_global) {
 
 	var visted;
 	
-	var deepEq = function(a, b, inside) {
-		if (!inside) {
-			// init list of places we don't need to visit
+	var deepEq = function(expected, actual, depth) {
+		if (!depth) {
+			// init list of places we don't want to visit
 			visited = [
-				_global,
 				Object.prototype,
 				Array.prototype,
 				Date.prototype,
@@ -205,42 +224,105 @@ void (function TestAPI(_global) {
 				Number.prototype,
 				Function.prototype,
 				Error.prototype,
-				Test
+				_global,
+				expected
 			];
-		} else if (inside > 10) {
-			return true; // don't bother digging any deeper
-		} else if (visited.some(function(place) { return place === a })) {
-			return true; // already visited here
 		} else {
-			visited.unshift(a); // add to list of places not to visit again (avoid circular references)
+			visited.unshift(actual); // add to list of places not to visit again (avoid circular references)
 		}
 		
-		var keysA = Object.getOwnPropertyNames(a);
-		var keysB = Object.getOwnPropertyNames(b);
+		var depth = (depth || 0) + 1;
 		
-		if (keysA.length != keysB.length) return false;
+		var expecting = Object.getOwnPropertyNames(expected);
+		
+		// bail if a and b have different numbers of properties
+		if (Object.getOwnPropertyNames(actual).length != expecting.length) return FAILED;
 				
-		if ( keysA.some(function difference(key) {
-			// bail if b doesn't have the key
-			if (!b.hasOwnProperty(key)) return true;
-			// compare a[key] to b[key]
-			switch (typeOf(a[key])) {
-				case "object":
+		if ( !expecting.some(function difference(key) {
+			// bail if expected key not actually there
+			if ( !actual.hasOwnProperty(key) ) return DIFFERENT;
+			// bail if actual type not same as expected type
+			if ( typeOf(actual[key]) != typeOf(expected[key]) ) return DIFFERENT;
+			// is actual value same as expected value?
+			switch (typeOf(expected[key])) {
 				case "array": {
-					return !deepEq(a[key], b[key], (inside || 0)+1);
+					if ( actual[key].length != expected[key].length ) return DIFFERENT;
+					// otherwise, go digging as if it were an object...
+				}
+				case "object": {
+					// bail if already visited this actual object
+					return ( depth >= 9 || visited.some(function(place){return place === actual[key]}) )
+						? SAME // don't bother digging any deeper
+						: ( deepEq(expected[key], actual[key], depth)
+							? SAME
+							: DIFFERENT );
+				}
+				case "regexp": {
+					return ( compareRegexp(actual[key], expected[key]) )
+						? SAME
+						: DIFFERENT;
 				}
 				default: {
-					return a[key] != b[key];
+					return ( actual[key] === expected[key] )
+						? SAME
+						: DIFFERENT;
 				}
 			}
-		}) ) { // a != b
-			return false;
-		};
-
-		if (!inside) {
-			visited = null; // free up RAM
+		}) ) { // actual == expected
+			if (depth==1) visited = null; // free up RAM
+			return PASSED;
+		} else { // actual != expected
+			if (depth==1) visited = null; // free up RAM
+			return FAILED;
 		}
-		return true;
+	}
+
+	// /////////////////////////////////////////////////////////////////
+	// INTERNAL: DEEP SIMILARITY CHECK
+	// Do enumerable properties in a exist in b, and optionally have same value?
+	// Much faster than deepEq
+
+	var similar = function(expected, actual, depth) {
+		var depth = (depth || 0) + 1;
+		var expecting = Object.keys(expected);
+		
+		if ( !expecting.some(function difference(key) {
+			// bail if expected key not actually there
+			if ( !actual.hasOwnProperty(key) ) return DIFFERENT;
+			// is actual value same as expected value?
+			switch ( typeOf(expected[key]) ) {
+				case "null": {
+					return SAME; // don't care what value is
+				}
+				case "array":
+				case "object": { // go digging
+					return ( depth >= 9 )
+						? SAME // don't bother digging any deeper
+						: ( similar(expected[key], actual[key], depth)
+							? SAME
+							: DIFFERENT );
+				}
+				case "nan": {
+					return ( isNaN(actual[key]) )
+						? SAME
+						: DIFFERENT;
+				}
+				case "regexp": {
+					return ( compareRegexp(actual[key], expected[key]) )
+						? SAME
+						: DIFFERENT;
+				}
+				default: {
+					return ( actual[key] == expected[key] )
+						? SAME
+						: DIFFERENT;
+				}
+			}
+		}) ) { // actual == expected
+			return PASSED;
+		} else { // actual != expected
+			return FAILED;
+		}
 	}
 
 	// /////////////////////////////////////////////////////////////////
@@ -261,7 +343,7 @@ void (function TestAPI(_global) {
 		makeConst(this, "_info", info    );
 		makeConst(this, "data",	 testData);
 	}
-	
+
 	makeConst(
 		UnitTest.prototype, "_global",
 		_global
@@ -294,15 +376,29 @@ void (function TestAPI(_global) {
 
 	makeConst( UnitTest.prototype, "deepEqual",
 		function( expected, actual, message ) {
-			var passed = deepEq(expected,actual);
+			var passed = deepEq(expected, actual);
 			return unitTestResult.call(this, passed, expected, actual, message, "deepEqual");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "notDeepEqual",
 		function( expected, actual, message ) {
-			var passed = !deepEq(expected,actual);
+			var passed = !deepEq(expected, actual);
 			return unitTestResult.call(this, passed, expected, actual, message, "notDeepEqual");
+		}
+	);
+
+	makeConst( UnitTest.prototype, "similarTo",
+		function( expected, actual, message ) {
+			var passed = similar(expected, actual);
+			return unitTestResult.call(this, passed, expected, actual, message, "similarTo");
+		}
+	);
+
+	makeConst( UnitTest.prototype, "notSimilarTo",
+		function( expected, actual, message ) {
+			var passed = !similar(expected, actual);
+			return unitTestResult.call(this, passed, expected, actual, message, "notSimilarTo");
 		}
 	);
 
@@ -570,7 +666,7 @@ void (function TestAPI(_global) {
 			// comment that test is starting
 			unitTestResult.call(
 				this, // scope
-				true, gameTime, (new Date()).getTime(), "'"+testName+"' running...", testMode.name, COMMENT);
+				true, gameTime, (new Date()).getTime(), "RUN: "+testName, testMode.name, COMMENT);
 			// module info
 			var modulePath = this._info.modulePath;
 			var moduleData = modules[modulePath].lifecycle.hasOwnProperty("moduleData")
@@ -704,7 +800,7 @@ void (function TestAPI(_global) {
 
 			throw new Error("Test(): Parameter(s) missing");
 
-		} else if (testMode.hasOwnProperty("appendTo")) { // run new test immediately
+		} else if ( hasOr(testMode, "appendTo", false) ) { // run new test immediately
 		
 			if (currentTest && 
 			   (currentTest._info.state === Test.UNIT_RUNNING) &&
@@ -755,9 +851,9 @@ void (function TestAPI(_global) {
 
 	makeConst(Test, "UNIT_PENDING", undefined);
 	makeConst(Test, "UNIT_RUNNING", null);
-	makeConst(Test, "UNIT_TIMEOUT", NaN);
-	makeConst(Test, "UNIT_SUCCESS", true);
-	makeConst(Test, "UNIT_FAILED" , false);
+	makeConst(Test, "UNIT_TIMEOUT", 0);
+	makeConst(Test, "UNIT_SUCCESS", PASSED);
+	makeConst(Test, "UNIT_FAILED" , FAILED);
 
 	// /////////////////////////////////////////////////////////////////
 	// PUBLIC: RESULTS OUTPUT

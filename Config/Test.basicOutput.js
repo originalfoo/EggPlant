@@ -56,8 +56,8 @@ void (function ConfigTest(_global) {
 			// now do each of the tests
 			module.tests.forEach(function(test) {
 				// output test summary heading
-				str = "( " + (test.state ? "✔" : "✘") + " " + test.testName + ")";
-				flatResults.push(fixAt(str, method).toUpperCase());
+				str = "» " + (test.state ? "✔" : "✘") + " " + test.testName;
+				flatResults.push(fixAt(str, method));
 			
 				// now do each of the results in the test
 				test.results.forEach(function(result) {

@@ -86,7 +86,7 @@ void (function TestTest(_global) {
 		}
 	);
 
-	Test("Test Assertions", Test.EXPECT( 8 ), function() {
+	Test("Test Assertions", Test.EXPECT( 12 ), function() {
 		REQUIRE( "Test Namespace" );
 
 		ok( true, "ok( )" );
@@ -99,6 +99,11 @@ void (function TestTest(_global) {
 		
 		deepEqual( {a:5}, {a:5}, "deepEqual( )" );
 		notDeepEqual( {a:1}, {a:5}, "notDeepEqual( )" );
+
+		similarTo( {a:5}, {a:5, b:1, c:3}, "similarTo( ) #1" );
+		similarTo( {b:null}, {a:5, b:1, c:3}, "similarTo( ) #2" );
+		notSimilarTo( {a:5}, {a:1, c:3}, "notSimilarTo( ) #1" );
+		notSimilarTo( {b:null}, {a:1, c:3}, "notSimilarTo( ) #2" );
 		
 		hasNative( "Math", "hasNative( )" );
 		
