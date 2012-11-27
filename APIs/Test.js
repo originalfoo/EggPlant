@@ -40,10 +40,23 @@ void (function TestAPI(_global) {
 			"Config/Test.basicOutput.js", // summary, console, debug, host, log
 			Check.LAZY_LOAD
 		);
-
+/*
 		Check.doWhen(
 			{}, self,
 			"Config/Test.htmlOutput.js", // html
+			Check.LAZY_LOAD
+		);
+*/
+	}
+
+	// /////////////////////////////////////////////////////////////////
+	// CONFIG - ONFINISH EVENT HANDLER
+	// Determines what happens when testing finishes
+
+	if (CheckAvailable) {
+		Check.doWhen(
+			{}, self,
+			"Config/Test.onFinish.js", // Test.outputTo("console")
 			Check.LAZY_LOAD
 		);
 	}
@@ -54,8 +67,7 @@ void (function TestAPI(_global) {
 	
 	if (CheckAvailable) {
 		Check.doWhen(
-			{"APIs/Diag.js": Check.ANY_VERSION},
-			self,
+			{"APIs/Diag.js": Check.ANY_VERSION}, self,
 			"Diags/Test.js",
 			Check.LAZY_LOAD
 		);
@@ -167,6 +179,8 @@ void (function TestAPI(_global) {
 
 	if (typeof _global.typeOf == "undefined") {
 		var typeOf = function(obj) {
+			if (!arguments.length) obj = this;
+			if (obj === _global) return "global";
 			return Object.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
 		};
 	}
@@ -622,8 +636,8 @@ void (function TestAPI(_global) {
 				var numFailed = 0;
 				// count # passed/failed
 				modules.forEach(function(modulePath) {
-					numPassed += modules[modulepath].numPassed;
-					numFailed += modules[modulepath].numFailed;
+					numPassed += modules[modulePath].numPassed;
+					numFailed += modules[modulePath].numFailed;
 				});
 				Test.onFinish(numModules, numTests, numPassed, numFailed);
 			}
@@ -795,7 +809,7 @@ void (function TestAPI(_global) {
 			});
 			// add mod to results object
 			obj.push(mod);
-		}
+		});
 		// return the compiled results object
 		return obj;
 	}

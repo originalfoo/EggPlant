@@ -50,7 +50,7 @@ void (function ConfigTest(_global) {
 			// output module summary heading
 			str = "[[ ∂" + (module.state ? "✔" : "✘") + " " + module.modulePath
 				+ " (✔: " + module.numPassed + ", ✘: " + module.numFailed + ") ]]";
-			flatResults.push(str); // module heading
+			flatResults.push(fixAt(str, method)); // module heading
 			flatResults.push("  "); // blank line
 			
 			// now do each of the tests
@@ -62,15 +62,14 @@ void (function ConfigTest(_global) {
 				// now do each of the results in the test
 				test.results.forEach(function(result) {
 					if (result.isComment) {
-						str = "''"+fixAt(result.message, method)+"'' <"+fixAt(result.name, method)+">";
+						str = "''"+result.message+"'' <"+result.name+">";
 					} else {
-						str = (result.passed ? "✔" : "✘")+" "+fixAt(result.message, method);
+						str = (result.passed ? "✔" : "✘")+" "+result.message;
 					}
-					flatResults.push(str);
+					flatResults.push(fixAt(str, method)); // result or comment
 				});
-				
-				// blank line after each set of test results
-				flatResults.push("  ");
+
+				flatResults.push("  "); // blank like after each test
 			});
 			
 		});
@@ -79,7 +78,7 @@ void (function ConfigTest(_global) {
 
 	var trickleTo; // "host", "console"
 	// trickles flatResults to trickleTo
-	_global.trickleTestOutput = funcion() {
+	_global.trickleTestOutput = function() {
 		var i = 4;
 		var str;
 		while (--i && flatResults.length) {
