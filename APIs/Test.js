@@ -56,7 +56,7 @@ void (function TestAPI(_global) {
 	if (CheckAvailable) {
 		Check.doWhen(
 			{}, self,
-			"Config/Test.onFinish.js", // Test.outputTo("console")
+			"Config/Test.events.js", // Test.outputTo("console")
 			Check.LAZY_LOAD
 		);
 	}
@@ -64,7 +64,7 @@ void (function TestAPI(_global) {
 	// /////////////////////////////////////////////////////////////////
 	// DIANOSTIC ROUTINES
 	// https://warzone.atlassian.net/wiki/display/EGG/Test+API+Diagnostics
-	
+/*	
 	if (CheckAvailable) {
 		Check.doWhen(
 			{"APIs/Diag.js": Check.ANY_VERSION}, self,
@@ -72,7 +72,7 @@ void (function TestAPI(_global) {
 			Check.LAZY_LOAD
 		);
 	}
-
+*/
 	// /////////////////////////////////////////////////////////////////
 	// TEST ROUTINES
 	// Tests the Test API! Note: Will always generate some failed results.
