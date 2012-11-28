@@ -1,7 +1,7 @@
-// CONFIG - TEST API - ONFINISH EVENT HANDLER
+// CONFIG - TEST API - DEFAULT EVENT HANDLERS
 //
 // Purpose:
-// * Automatically outputTo("console") when tests finish
+// * Automatically outputTo("console") when Test.onFinish()
 //
 // License:
 // * CC-BY-SA 3.0: http://creativecommons.org/licenses/by-sa/3.0/
@@ -12,7 +12,7 @@
 void (function ConfigTest(_global) {
 
 	var self = {
-		file: "Config/Test.onFinish.js",
+		file: "Config/Test.events.js",
 		ver : 1.0
 	};
 
