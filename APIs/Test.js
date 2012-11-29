@@ -16,7 +16,7 @@ void (function TestAPI(_global) {
 
 	var self = {
 		file: "APIs/Test.js",
-		ver : 1.3
+		ver : 1.4
 	};
 
 	var CheckAvailable = _global.hasOwnProperty("Check"); // is dependency checker installed?
@@ -183,15 +183,26 @@ void (function TestAPI(_global) {
 	// INTERNAL: TYPEOF
 	// Simplified version of typeOf() in case Util API not installed
 
-	if (!_global.hasOwnProperty("typeOf")) {
-		var typeOf = function(obj) {
-			if (!arguments.length) obj = this;
-			if (obj === null) return "null";
-			if (obj === _global) return "global";
-			return Object.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
-		};
-	}
+	var toStr = Object.prototype.toString;
 
+	var typeOf = ( _global.hasOwnProperty("typeOf") )
+		? _global.typeOf
+		: function(obj) {
+				if (!arguments.length) obj = this;
+				
+				switch (obj) {
+					case undefined: return "undefined";
+					case null     : return "null";
+					case _global  : return "global";
+					default       : { // return actual type, unless NaN in which case "nan"
+						var typ = toStr.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
+						return (typ == "number")
+							? ( isNaN(obj) ? "nan" : typ )
+							: typ;
+					}
+				}
+		  };
+		  
 	// /////////////////////////////////////////////////////////////////
 	// INTERNAL: COMPARE REGEXP
 	// Is regexp A same as regexp B?
@@ -212,8 +223,8 @@ void (function TestAPI(_global) {
 
 	var visted;
 	
-	var deepEq = function(expected, actual, depth) {
-		if (!depth) {
+	var deepEq = function(actual, expected, depth) {
+		if ( !depth ) {
 			// init list of places we don't want to visit
 			visited = [
 				Object.prototype,
@@ -231,12 +242,12 @@ void (function TestAPI(_global) {
 			visited.unshift(actual); // add to list of places not to visit again (avoid circular references)
 		}
 		
-		var depth = (depth || 0) + 1;
+		var depth = ( depth || 0 ) + 1;
 		
 		var expecting = Object.getOwnPropertyNames(expected);
 		
 		// bail if a and b have different numbers of properties
-		if (Object.getOwnPropertyNames(actual).length != expecting.length) return FAILED;
+		if ( Object.getOwnPropertyNames(actual).length != expecting.length ) return FAILED;
 				
 		if ( !expecting.some(function difference(key) {
 			// bail if expected key not actually there
@@ -244,7 +255,7 @@ void (function TestAPI(_global) {
 			// bail if actual type not same as expected type
 			if ( typeOf(actual[key]) != typeOf(expected[key]) ) return DIFFERENT;
 			// is actual value same as expected value?
-			switch (typeOf(expected[key])) {
+			switch ( typeOf(expected[key]) ) {
 				case "array": {
 					if ( actual[key].length != expected[key].length ) return DIFFERENT;
 					// otherwise, go digging as if it were an object...
@@ -262,6 +273,7 @@ void (function TestAPI(_global) {
 						? SAME
 						: DIFFERENT;
 				}
+				// this won't deal with NaN but not worried about that (should I be?)
 				default: {
 					return ( actual[key] === expected[key] )
 						? SAME
@@ -282,42 +294,51 @@ void (function TestAPI(_global) {
 	// Do enumerable properties in a exist in b, and optionally have same value?
 	// Much faster than deepEq
 
-	var similar = function(expected, actual, depth) {
+	var similar = function(actual, expected, depth) {
 		var depth = (depth || 0) + 1;
 		var expecting = Object.keys(expected);
 		
 		if ( !expecting.some(function difference(key) {
-			// bail if expected key not actually there
-			if ( !actual.hasOwnProperty(key) ) return DIFFERENT;
-			// is actual value same as expected value?
-			switch ( typeOf(expected[key]) ) {
-				case "null": {
-					return SAME; // don't care what value is
-				}
-				case "array":
-				case "object": { // go digging
-					return ( depth >= 9 )
-						? SAME // don't bother digging any deeper
-						: ( similar(expected[key], actual[key], depth)
+			
+			if ( !actual.hasOwnProperty(key) ) {
+				return ( expected[key] === Test.NOT_FOUND )
+					? SAME
+					: DIFFERENT;
+			} else {
+				// is actual value same as expected value?
+				switch ( typeOf(expected[key]) ) {
+					case "null": {
+						return SAME;
+					}
+					case "undefined": {
+						return DIFFERENT;
+					}
+					case "array":
+					case "object": { // go digging
+						return ( depth >= 9 )
+							? SAME // don't bother digging any deeper
+							: ( similar(actual[key], expected[key], depth)
+								? SAME
+								: DIFFERENT );
+					}
+					case "nan": {
+						return ( isNaN(actual[key]) )
 							? SAME
-							: DIFFERENT );
-				}
-				case "nan": {
-					return ( isNaN(actual[key]) )
-						? SAME
-						: DIFFERENT;
-				}
-				case "regexp": {
-					return ( compareRegexp(actual[key], expected[key]) )
-						? SAME
-						: DIFFERENT;
-				}
-				default: {
-					return ( actual[key] == expected[key] )
-						? SAME
-						: DIFFERENT;
-				}
+							: DIFFERENT;
+					}
+					case "regexp": {
+						return ( compareRegexp(actual[key], expected[key]) )
+							? SAME
+							: DIFFERENT;
+					}
+					default: {
+						return ( actual[key] == expected[key] )
+							? SAME
+							: DIFFERENT;
+					}
+				} // end switch
 			}
+			
 		}) ) { // actual == expected
 			return PASSED;
 		} else { // actual != expected
@@ -355,83 +376,80 @@ void (function TestAPI(_global) {
 
 	makeConst( UnitTest.prototype, "ok",
 		function( state, message ) {
-			var passed = state;
-			return unitTestResult.call(this, passed, state, state, message, "ok");
+			var passed = state; // just for consistency with other assertions
+			return unitTestResult.call(this, passed, state, true, message, "ok");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "equal",
-		function( expected, actual, message ) {
+		function( actual, expected, message ) {
 			var passed = (expected == actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "equal");
+			return unitTestResult.call(this, passed, actual, expected, message, "equal");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "notEqual",
-		function( expected, actual, message ) {
+		function( actual, expected, message ) {
 			var passed = (expected != actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "notEqual");
+			return unitTestResult.call(this, passed, actual, expected, message, "notEqual");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "deepEqual",
-		function( expected, actual, message ) {
-			var passed = deepEq(expected, actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "deepEqual");
+		function( actual, expected, message ) {
+			var passed = deepEq(actual, expected);
+			return unitTestResult.call(this, passed, actual, expected, message, "deepEqual");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "notDeepEqual",
-		function( expected, actual, message ) {
-			var passed = !deepEq(expected, actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "notDeepEqual");
+		function( actual, expected, message ) {
+			var passed = !deepEq(actual, expected);
+			return unitTestResult.call(this, passed, actual, expected, message, "notDeepEqual");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "similarTo",
-		function( expected, actual, message ) {
-			var passed = similar(expected, actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "similarTo");
+		function( actual, expected, message ) {
+			var passed = similar(actual, expected);
+			return unitTestResult.call(this, passed, actual, expected, message, "similarTo");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "notSimilarTo",
-		function( expected, actual, message ) {
-			var passed = !similar(expected, actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "notSimilarTo");
+		function( actual, expected, message ) {
+			var passed = !similar(actual, expected);
+			return unitTestResult.call(this, passed, actual, expected, message, "notSimilarTo");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "strictEqual",
-		function( expected, actual, message ) {
+		function( actual, expected, message ) {
 			var passed = (expected === actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "strictEqual");
+			return unitTestResult.call(this, passed, actual, expected, message, "strictEqual");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "notStrictEqual",
-		function( expected, actual, message ) {
+		function( actual, expected, message ) {
 			var passed = (expected !== actual);
-			return unitTestResult.call(this, passed, expected, actual, message, "notStrictEqual");
+			return unitTestResult.call(this, passed, actual, expected, message, "notStrictEqual");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "hasNative",
 		function( key, message ) {
-			var passed;
-			if (_global.hasOwnProperty("Define")) { // use Define API
-				passed = Define.hasNative(key);
-			} else { // do basic check
-				passed = _global.hasOwnProperty(key);
-			}
-			return unitTestResult.call(this, passed, true, passed, message, "hasNative");
+			var passed = ( _global.hasOwnProperty("Define") )
+				? Define.hasNative(key) // use Define API if available
+				: _global.hasOwnProperty(key); // basic check (don't use hasOr() here as key value might typecast to false)
+			return unitTestResult.call(this, passed, passed, true, message || key+" defined", "hasNative");
 		}
 	);
 
 	makeConst( UnitTest.prototype, "comment",
 		function( message ) {
-			var passed = true;
-			return unitTestResult.call(this, passed, true, true, message, "comment", COMMENT);
+			var passed = null; // just for consistency with other asserts (note: won't affect test outcome)
+			return unitTestResult.call(this, passed, null, null, message, "comment", COMMENT);
 		}
 	);
 
@@ -509,7 +527,7 @@ void (function TestAPI(_global) {
 	// INTERNAL: LOG A RESULT / COMMENT
 	// Called in scope of test where results should be stored
 
-	var unitTestResult = function(passed, expected, actual, message, name, isComment) {
+	var unitTestResult = function(passed, actual, expected, message, name, isComment) {
 		//console("["+this.module+"] "+name+"("+passed+") "+message);
 		// create results object
 		var result = {
@@ -533,10 +551,23 @@ void (function TestAPI(_global) {
 	}
 
 	// /////////////////////////////////////////////////////////////////
+	// INTERNAL: HAS ASYNCH SESSION REACHED/EXCEEDED EXPECTED RESULTS?
+	// If asynch session expects certain number of results, have we reached that threshold?
+	// The function is run in the scope of the test to be checked
+
+	var asynchResultsLimit = function() {
+		var expected = hasOr(this._info.testMode, "expect", undefined);
+		return ( expected === undefined )
+			? false // no threshold set, keep waiting
+			: this._info.results.count >= expected;
+	}
+
+	// /////////////////////////////////////////////////////////////////
 	// INTERNAL: CHECK TEST STATE
 	// Determines if a test has passed, failed or still in progress
 	// The function is run in the scope of the test to be checked
 	// https://warzone.atlassian.net/wiki/display/EGG/Test+API+-+Dev+Notes
+
 
 	var unitTestEvent = function(event, msg) {
 		// event can be:
@@ -559,8 +590,8 @@ void (function TestAPI(_global) {
 				unitTestResult.call(
 					this, // scope
 					this._info.state,
-					(this._info.testMode.hasOwnProperty("expect") ? this._info.testMode.expect : undefined),
 					this._info.results.count,
+					hasOr(this._info.testMode, "expect", undefined),
 					"FAIL: "+event+" "+(msg || "signal received"),
 					event,
 					COMMENT
@@ -574,8 +605,8 @@ void (function TestAPI(_global) {
 					unitTestResult.call(
 						this, // scope
 						this._info.state,
-						(this._info.testMode.hasOwnProperty("expect") ? this._info.testMode.expect : undefined),
 						this._info.results.count,
+						hasOr(this._info.testMode, "expect", undefined),
 						"FAIL: One or more assertions failed",
 						event,
 						COMMENT
@@ -587,8 +618,8 @@ void (function TestAPI(_global) {
 					unitTestResult.call(
 						this, // scope
 						this._info.state,
-						this._info.testMode.expect,
 						this._info.results.count,
+						this._info.testMode.expect,
 						(this._info.state === Test.UNIT_SUCCESS ? "SUCCESS: Expected number of results" : "FAIL: Unexpected number of results"),
 						event,
 						COMMENT
@@ -598,8 +629,8 @@ void (function TestAPI(_global) {
 					unitTestResult.call(
 						this, // scope
 						this._info.state,
-						undefined,
 						this._info.results.count,
+						undefined,
 						"SUCCESS: All assertions passed",
 						event,
 						COMMENT
@@ -609,9 +640,9 @@ void (function TestAPI(_global) {
 			}
 			case "WAIT"   : {
 				// redirect to "DONE" if passed or failed
-				if (this._info.state === Test.UNIT_FAILED) {
+				if ( this._info.state === Test.UNIT_FAILED ) {
 					return unitTestEvent.call(this, "DONE");
-				} else if (this._info.testMode.hasOwnProperty("expect") && this._info.results.count >= this._info.testMode.expect) {
+				} else if ( asynchResultsLimit.call(this) ) {
 					return unitTestEvent.call(this, "DONE");
 				} // else keep waiting
 				// keep waiting...
@@ -619,8 +650,8 @@ void (function TestAPI(_global) {
 				unitTestResult.call(
 					this, // scope
 					this._info.state,
-					(this._info.testMode.hasOwnProperty("expect") ? this._info.testMode.expect : undefined),
 					this._info.results.count,
+					hasOr(this._info.testMode, "expect", undefined),
 					"WAIT: Waiting for more results",
 					event,
 					COMMENT
@@ -666,7 +697,7 @@ void (function TestAPI(_global) {
 			// comment that test is starting
 			unitTestResult.call(
 				this, // scope
-				true, gameTime, (new Date()).getTime(), "RUN: "+testName, testMode.name, COMMENT);
+				null, gameTime, (new Date()).getTime(), "RUN: "+testName, testMode.name, COMMENT);
 			// module info
 			var modulePath = this._info.modulePath;
 			var moduleData = modules[modulePath].lifecycle.hasOwnProperty("moduleData")
@@ -702,7 +733,7 @@ void (function TestAPI(_global) {
 		} catch(e) {
 			unitTestResult.call(
 				this, // scope
-				false, false, true, e.message, (e.hasOwnProperty("signal") ? e.signal : "ERROR"), COMMENT
+				false, null, null, e.message, (e.hasOwnProperty("signal") ? e.signal : "ERROR"), COMMENT
 			);
 		}
 		return this._info.state; // https://warzone.atlassian.net/wiki/display/EGG/Test+API+-+Dev+Notes#TestAPI-DevNotes-TestStates
@@ -854,6 +885,14 @@ void (function TestAPI(_global) {
 	makeConst(Test, "UNIT_TIMEOUT", 0);
 	makeConst(Test, "UNIT_SUCCESS", PASSED);
 	makeConst(Test, "UNIT_FAILED" , FAILED);
+
+	// /////////////////////////////////////////////////////////////////
+	// PUBLIC: PROPERTY STATES (FOR SIMILARTO() AND NOTSIMILARTO() ASSERTIONS)
+	// https://warzone.atlassian.net/wiki/pages/viewpage.action?pageId=16777272
+	// https://warzone.atlassian.net/wiki/pages/viewpage.action?pageId=16777274
+
+	makeConst(Test, "FOUND", null);
+	makeConst(Test, "NOT_FOUND", undefined);
 
 	// /////////////////////////////////////////////////////////////////
 	// PUBLIC: RESULTS OUTPUT

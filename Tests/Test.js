@@ -67,13 +67,13 @@ void (function TestTest(_global) {
 	Test("Module path", Test.EXPECT( 1 ), function(self) {
 		REQUIRE( "Test Namespace" );
 		
-		equal( self.file+"/Modules", modulePath, "Test.module() functioning properly" );
+		equal( modulePath, self.file+"/Modules", "Test.module() functioning properly" );
 	}, self);
 
 	Test("Module lifecycle", Test.EXPECT( 1 ), function() {
 		REQUIRE( "^" );
 		
-		equal( 2, moduleData.test, "Lifecycle functioning properly" );
+		equal( moduleData.test, 2, "Lifecycle functioning properly" );
 	});
 
 	// /////////////////////////////////////////////////////////////////
@@ -86,24 +86,27 @@ void (function TestTest(_global) {
 		}
 	);
 
-	Test("Test Assertions", Test.EXPECT( 12 ), function() {
+	Test("Test Assertions", Test.EXPECT( 14 ), function() {
 		REQUIRE( "Test Namespace" );
 
 		ok( true, "ok( )" );
 		
 		equal( true, true, "equal( )" );
-		notEqual( true, false, "notEqual( )" );
+		notEqual( false, true, "notEqual( )" );
 		
 		strictEqual( true, true, "strictEqual( )" );
-		notStrictEqual( false, null, "notStrictEqual( )" );
+		notStrictEqual( null, false, "notStrictEqual( )" );
 		
 		deepEqual( {a:5}, {a:5}, "deepEqual( )" );
 		notDeepEqual( {a:1}, {a:5}, "notDeepEqual( )" );
 
-		similarTo( {a:5}, {a:5, b:1, c:3}, "similarTo( ) #1" );
-		similarTo( {b:null}, {a:5, b:1, c:3}, "similarTo( ) #2" );
-		notSimilarTo( {a:5}, {a:1, c:3}, "notSimilarTo( ) #1" );
-		notSimilarTo( {b:null}, {a:1, c:3}, "notSimilarTo( ) #2" );
+		similarTo( {a:5, b:1, c:3}, {a:5}, "similarTo( ) #1" );
+		similarTo( {a:5, b:1, c:3}, {b:Test.FOUND}, "similarTo( ) #2" );
+		similarTo( {a:5, b:1, c:3}, {d:Test.NOT_FOUND}, "similarTo( ) #3" );
+		
+		notSimilarTo( {a:1, c:3}, {a:5}, "notSimilarTo( ) #1" );
+		notSimilarTo( {a:1, c:3}, {b:Test.FOUND}, "notSimilarTo( ) #2" );
+		notSimilarTo( {a:5, b:1, c:3, d:2}, {d:Test.NOT_FOUND}, "notSimilarTo( ) #3" );
 		
 		hasNative( "Math", "hasNative( )" );
 		
@@ -215,9 +218,9 @@ void (function TestTest(_global) {
 		var expected, actual;
 		
 		if (ok( Test.hasOwnProperty("ANY"), "Test.ANY( ) defined" )) {
-			expected = {name: "ANY", after: "DONE"};
 			actual = Test.ANY( );
-			deepEqual( expected, actual, "Test.ANY( ) returns valid mode" );
+			expected = {name: "ANY", after: "DONE"};
+			deepEqual( actual, expected, "Test.ANY( ) returns valid mode" );
 		}
 
 		if (ok( Test.hasOwnProperty("EXPECT"), "Test.EXPECT( ) defined" )) { // we wouldn't be here if it wasn't lol
@@ -245,27 +248,27 @@ void (function TestTest(_global) {
 			} catch(e) {
 				ok( true, "Test.EXPECT( -1 ) throws an error" );
 			}
-			expected = {name: "EXPECT", expect: 5, after: "DONE"};
 			actual = Test.EXPECT( 5 );
-			deepEqual( expected, actual, "Test.EXPECT( 5 ) returns valid mode" );
+			expected = {name: "EXPECT", expect: 5, after: "DONE"};
+			deepEqual( actual, expected, "Test.EXPECT( 5 ) returns valid mode" );
 		}
 
 		if (ok( Test.hasOwnProperty("ASYNCH"), "Test.ASYNCH( ) defined" )) {
-			expected = {name: "ASYNCH", ttl: 60*1000, after: "WAIT"};
 			actual = Test.ASYNCH( );
-			deepEqual( expected, actual, "Test.ASYNCH( ) returns valid mode" );
+			expected = {name: "ASYNCH", ttl: 60*1000, after: "WAIT"};
+			deepEqual( actual, expected, "Test.ASYNCH( ) returns valid mode" );
 
-			expected = {name: "ASYNCH", ttl: 10*1000, after: "WAIT"};
 			actual = Test.ASYNCH( 10 );
-			deepEqual( expected, actual, "Test.ASYNCH( 10 ) returns valid mode" );
+			expected = {name: "ASYNCH", ttl: 10*1000, after: "WAIT"};
+			deepEqual( actual, expected, "Test.ASYNCH( 10 ) returns valid mode" );
 
-			expected = {name: "ASYNCH", ttl: 60*1000, expect: 5, after: "WAIT"};
 			actual = Test.ASYNCH( null, 5 );
-			deepEqual( expected, actual, "Test.ASYNCH( null, 5 ) returns valid mode" );
+			expected = {name: "ASYNCH", ttl: 60*1000, expect: 5, after: "WAIT"};
+			deepEqual( actual, expected, "Test.ASYNCH( null, 5 ) returns valid mode" );
 
-			expected = {name: "ASYNCH", ttl: 10*1000, expect: 5, after: "WAIT"};
 			actual = Test.ASYNCH( 10, 5 );
-			deepEqual( expected, actual, "Test.ASYNCH( 10, 5 ) returns valid mode" );
+			expected = {name: "ASYNCH", ttl: 10*1000, expect: 5, after: "WAIT"};
+			deepEqual( actual, expected, "Test.ASYNCH( 10, 5 ) returns valid mode" );
 		}
 
 		if (ok( Test.hasOwnProperty("APPEND"), "Test.APPEND( ) defined" )) {
@@ -281,9 +284,9 @@ void (function TestTest(_global) {
 			} catch(e) {
 				ok( true, "Test.APPEND( 'Non-exiting test' ) throws an error" );
 			}
-			expected = {name: "APPEND", appendTo: "Test Mode Objects", after: "WAIT"};
 			actual = Test.APPEND( "Test Mode Objects" );
-			deepEqual( expected, actual, "Test.APPEND( 'Test Mode Objects' ) returns valid mode" );
+			expected = {name: "APPEND", appendTo: "Test Mode Objects", after: "WAIT"};
+			deepEqual( actual, expected, "Test.APPEND( 'Test Mode Objects' ) returns valid mode" );
 		}	
 	});
 
