@@ -9,7 +9,7 @@
 //
 // License:
 // * CC-BY-SA 3.0: http://creativecommons.org/licenses/by-sa/3.0/
-// * URL: https://warzone.atlassian.net/wiki/display/UtilJS
+// * URL: https://warzone.atlassian.net/wiki/display/EGG/Util+API
 //
 // /////////////////////////////////////////////////////////////////
 
@@ -128,7 +128,7 @@ void (function UtilAPI(_global) {
 
 	// /////////////////////////////////////////////////////////////////
 	// PUBLIC: GET CONSTRUCTOR (CLASS) NAME
-	// 
+	// https://warzone.atlassian.net/wiki/pages/viewpage.action?pageId=16777332
 
 	makeProp(
 		DATA_READONLY_HIDDEN,
@@ -286,7 +286,7 @@ void (function UtilAPI(_global) {
 	// /////////////////////////////////////////////////////////////////
 	// PUBLIC: QUICK OBJ CLONE
 	// Returns new object with copy of enumerable keys & values (1 level deep) of source obj
-	// Mainly used for diagnostic routines
+	// Mainly used for diagnostic routines, I've not bothered documenting or testing it.
 	
 	Object.addConst(
 		"qiuckCopy",
