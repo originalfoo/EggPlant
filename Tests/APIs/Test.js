@@ -12,7 +12,7 @@
 void (function TestTest(_global) {
 
 	var self = {
-		file: "Tests/Test.js",
+		file: "Tests/APIs/Test.js",
 		ver : 1.1
 	};
 

@@ -342,7 +342,7 @@ void (function UtilAPI(_global) {
 
 		// if we didn't find it, keep digging?
 		if (!found && keepDigging && sProto in proto) {
-			return findMatch(proto[sProto], fn, --keepDigging);
+			return findKey(proto[sProto], fn, --keepDigging);
 		}
 		
 		// otherwise return what we've found so far
@@ -484,7 +484,7 @@ void (function UtilAPI(_global) {
 
 	// /////////////////////////////////////////////////////////////////
 	// PUBLIC: RUN FUNCTION X TIMES
-	// 
+	// https://warzone.atlassian.net/wiki/pages/viewpage.action?pageId=16777353
 	//
 	// Inspired by:
 	//	http://www.ruby-doc.org/core-1.9.3/Integer.html#method-i-times
@@ -784,6 +784,18 @@ void (function UtilAPI(_global) {
 	// https://warzone.atlassian.net/wiki/pages/viewpage.action?pageId=16023581
 
 	_global.addConst("Check", Check);
+
+	// /////////////////////////////////////////////////////////////////
+	// UNIT TESTS
+	// https://warzone.atlassian.net/wiki/display/EGG/Test+API
+/*
+	Check.doWhen(
+		{"Test.js": Check.ANY_VERSION},
+		self,
+		"Tests/APIs/Util.js",
+		Check.LAZY_LOAD
+	);
+*/
 
 	// /////////////////////////////////////////////////////////////////
 	// DIANOSTIC ROUTINES

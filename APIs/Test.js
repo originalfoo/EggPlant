@@ -80,7 +80,7 @@ void (function TestAPI(_global) {
 	if (CheckAvailable) {
 		Check.doWhen(
 			{}, self,
-			"Tests/Test.js",
+			"Tests/APIs/Test.js",
 			Check.LAZY_LOAD
 		);
 	}

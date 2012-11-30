@@ -12,7 +12,7 @@
 void (function TestUtil() {
 
 	var self = {
-		file: "Tests/Util.js",
+		file: "Tests/APIs/Util.js",
 		ver : 1.0
 	};
 
@@ -360,8 +360,32 @@ void (function TestUtil() {
 		self.file+"/Function Manipulation",
 		{
 			url: "https://warzone.atlassian.net/wiki/display/EGG/Function+Manipulation",
+			moduleData: function(str1, str2) {
+				return str1+" "+str2;
+			}
 		}
 	);
+
+	Test("function.curry() function", Test.EXPECT( 1 ), function() {
+		ok( Function.prototype.hasOwnProperty("curry"), "Function.prototype.curry() defined" );
+	});
+
+	Test("function.curry() invocation", Test.EXPECT( 1 ), function() {
+		REQUIRE( "function.curry() function" );
+		
+		ok.curry(true).call(currentTest, "Mmmm, curry!");
+	});
+
+	Test("function.wraps() function", Test.EXPECT( 1 ), function() {
+		ok( Function.prototype.hasOwnProperty("curry"), "Function.prototype.curry() defined" );
+	});
+
+	Test("function.wraps() invocation", Test.EXPECT( 1 ), function() {
+		REQUIRE( "function.wraps() function" );
+		REQUIRE( "function.curry() function" );
+		
+		ok.curry(true).wraps(moduleData.curry("Wrapped")).call(currentTest, "in curry");
+	});
 
 	Test("n.times() function", Test.EXPECT( 2 ), function() {
 		ok( Number.prototype.hasOwnProperty("times"), "Number.prototype.times() defined" );
@@ -371,10 +395,10 @@ void (function TestUtil() {
 
 	Test("(2).times() invocation", Test.EXPECT( 2 ), function() {
 		REQUIRE( "n.times() function" );
+		REQUIRE( "function.wraps() function" );
+		REQUIRE( "function.curry() function" );
 		
-		var doOk = function(num) { ok( true, "Iteration found, num == "+num ); }
-		
-		(2).times(doOk, this);
+		(2).times(ok.curry(true).wraps(moduleData.curry("Iteration")), currentTest);
 	});
 
 	Test("(NaN).times() invocation", Test.EXPECT( 0 ), function() {
@@ -391,6 +415,96 @@ void (function TestUtil() {
 		comment( "Should not do any iterations and therefore not generate any results" );
 		
 		(-1).times(ABORT, this); // will throw abort signal if it iterates
+	});
+
+	// /////////////////////////////////////////////////////////////////
+	// TEST: INHERITANCE MODEL
+
+	Test.module(
+		self.file+"/Inheritance Model",
+		{
+			url: "https://warzone.atlassian.net/wiki/display/EGG/Inheritance+Model",
+		}
+	);
+
+	Test("function.inherit() function", Test.EXPECT( 1 ), function() {
+		ok( Function.prototype.hasOwnProperty("inherit"), "Function.prototype.inherit() defined" );
+	});
+
+	Test("function.inherit() invocation", Test.EXPECT( 6 ), function() {
+		REQUIRE( "function.inherit() function" );
+	
+		var sClass = function() {
+			ABORT( "Superclass constructor should not get called during inheritance" );
+		}
+		
+		sClass.prototype.foo = "foo";
+		sClass.prototype.bar = "bar";
+	
+		var klass = function Klass() {
+			this.baz = "baz";
+		}
+		
+		klass.inherit(sClass);
+		
+		klass.prototype.foo = "klass";
+		
+		var inst = new klass();
+		
+		equal( inst.baz, "baz", "Class constructor was invoked" );
+		equal( inst.foo, "klass", "Class prototypes override superclass prototypes" );
+		equal( inst.bar, "bar", "Superclass prototypes are inherited" );
+		
+		equal( inst.classOf(), "Klass", "Instance has correct class" );
+		ok( inst instanceof klass, "Instance is an instance of the class" );
+		ok( inst instanceof sClass, "Instance is an instance of the superclass" );
+	});
+
+	Test("object.super() function", Test.EXPECT( 2 ), function() {
+		REQUIRE( "function.inherit() invocation" );
+		
+		var sClass = function() {};
+		var klass = function Klass() {};
+
+		equal( klass.prototype.hasOwnProperty("super"), false, ".super() method not available before inheritance" );
+
+		klass.inherit(sClass);
+		
+		equal( klass.prototype.hasOwnProperty("super"), true, ".super() method available after inheritance" );
+	});
+
+	Test("object.super() invocations", Test.EXPECT( 6 ), function() {
+		REQUIRE( "object.super() function" );
+	
+		var sClass = function(str) {
+			equal( str, "ping", "Superclass constructor invoked with param" );
+			return "pong";
+		}
+		
+		sClass.prototype.foo = function(str) {
+			equal( str, "ping", "Superclass .foo() invoked with param" );
+			return "pong";
+		}
+	
+		var klass = function Klass() {
+			ok( true, "Class constructor invoked" );
+			
+			var ping = this["super"]("ping");
+			equal( ping, "pong", "Superclass constructor return value received" );
+		}
+		
+		klass.inherit(sClass);
+		
+		klass.prototype.foo = function() {
+			ok ( true, "Class .foo() invoked" );
+			
+			var ping = this["super"]("ping");
+			equal( ping, "pong", "Superclass .foo() return value received" );
+		}
+		
+		var inst = new klass();
+		
+		inst.foo();
 	});
 
 

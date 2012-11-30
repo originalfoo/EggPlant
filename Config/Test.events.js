@@ -32,7 +32,8 @@ void (function ConfigTest(_global) {
 	// CONFIG: ADD HANDLER
 	
 	Test.onFinish = function() {
-		Test.outputTo("console");
+		Test.outputTo("console"); // full output
+//		Test.outputTo("consoleOnlyFails"); // only output fails
 	}
 
 	// /////////////////////////////////////////////////////////////////
