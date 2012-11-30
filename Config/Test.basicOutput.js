@@ -39,7 +39,7 @@ void (function ConfigTest(_global) {
 	}
 	
 	var flatResults;
-	var flattenResults = function(method, results) {
+	var flattenResults = function(method, results, onlyFails) {
 		// used for "console", "debug", "host" and "log" output modes
 		
 		flatResults = [];
@@ -55,18 +55,20 @@ void (function ConfigTest(_global) {
 			
 			// now do each of the tests
 			module.tests.forEach(function(test) {
+				if (onlyFails && test.state) return;
 				// output test summary heading
 				str = "» " + (test.state ? "✔" : "✘") + " " + test.testName;
 				flatResults.push(fixAt(str, method));
 			
 				// now do each of the results in the test
 				test.results.forEach(function(result) {
+					if (onlyFails && result.passed) return;
 					if (result.isComment) {
 						str = "''"+result.message+"'' <"+result.name+">";
 					} else {
 						str = (result.passed ? "✔" : "✘")+" "+result.message;
 					}
-					flatResults.push(fixAt(str, method)); // result or comment
+					flatResults.push(fixAt(str, method));
 				});
 
 				flatResults.push("  "); // blank like after each test
@@ -173,6 +175,16 @@ void (function ConfigTest(_global) {
 	}
 	Test.outputTo = {
 		name  : "console",
+		method: consoleFn
+	}
+
+	var consoleFn = function(results) {
+		trickleTo = "console";
+		flattenResults(trickleTo, results, true);
+		queue("trickleTestOutput", 5000);
+	}
+	Test.outputTo = {
+		name  : "consoleOnlyFails",
 		method: consoleFn
 	}
 
