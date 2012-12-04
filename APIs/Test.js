@@ -16,7 +16,7 @@ void (function TestAPI(_global) {
 
 	var self = {
 		file: "APIs/Test.js",
-		ver : 1.4
+		ver : 1.5
 	};
 
 	var CheckAvailable = _global.hasOwnProperty("Check"); // is dependency checker installed?
@@ -89,13 +89,21 @@ void (function TestAPI(_global) {
 	// INTERNAL: CONSTANTS
 	// Can't define const in a function in current WZ JS env, hence vars :s
 
-	var COMMENT   = true;  // makes unitTestResult() treat the result as a non-state-affecting comment
+	// makes unitTestResult() treat the result as a non-state-affecting comment
+	var COMMENT   = true;
 	
-	var DIFFERENT = true;  // used by deepEq() and similar()
-	var SAME      = false; // used by deepEq() and similar()
+	// following are used by deepEq() and similar()
+	var DIFFERENT = function( message ) {
+		// use this either as a simple constant, eg: return DIFFERENT;
+		// or a a function call that will add a comment to current test
+		// eg. return DIFFERENT("hello world");
+		unitTestResult.call(currentTest, false, null, null, message, "DIFFERENCE", COMMENT);
+		return true;
+	}
+	var SAME      = false;
 
-	var FAILED    = false; // used by deepEq() and similar()
-	var PASSED    = true;  // used by deepEq() and similar()
+	var FAILED    = false;
+	var PASSED    = true;
 	
 	// /////////////////////////////////////////////////////////////////
 	// INTERNAL: TEST MANAGEMENT VARS
@@ -247,17 +255,22 @@ void (function TestAPI(_global) {
 		var expecting = Object.getOwnPropertyNames(expected);
 		
 		// bail if a and b have different numbers of properties
-		if ( Object.getOwnPropertyNames(actual).length != expecting.length ) return FAILED;
+		var actualKeys = Object.getOwnPropertyNames(actual);
+		if ( actualKeys.length != expecting.length ) {
+			DIFFERENT("Expected "+expecting.length+": "+expecting);
+			DIFFERENT("Actual "+actualKeys.length+": "+actualKeys);
+			return FAILED;
+		}
 				
 		if ( !expecting.some(function difference(key) {
 			// bail if expected key not actually there
-			if ( !actual.hasOwnProperty(key) ) return DIFFERENT;
+			if ( !actual.hasOwnProperty(key) ) return DIFFERENT("Property missing: "+key);
 			// bail if actual type not same as expected type
-			if ( typeOf(actual[key]) != typeOf(expected[key]) ) return DIFFERENT;
+			if ( typeOf(actual[key]) != typeOf(expected[key]) ) return DIFFERENT("Unexpected type: "+typeOf(actual[key]));
 			// is actual value same as expected value?
 			switch ( typeOf(expected[key]) ) {
 				case "array": {
-					if ( actual[key].length != expected[key].length ) return DIFFERENT;
+					if ( actual[key].length != expected[key].length ) return DIFFERENT("Unexpected array length: "+actual[key].length);
 					// otherwise, go digging as if it were an object...
 				}
 				case "object": {
@@ -266,18 +279,18 @@ void (function TestAPI(_global) {
 						? SAME // don't bother digging any deeper
 						: ( deepEq(expected[key], actual[key], depth)
 							? SAME
-							: DIFFERENT );
+							: DIFFERENT("Nested array or object did not match") );
 				}
 				case "regexp": {
 					return ( compareRegexp(actual[key], expected[key]) )
 						? SAME
-						: DIFFERENT;
+						: DIFFERENT("Regular expression did not match");
 				}
 				// this won't deal with NaN but not worried about that (should I be?)
 				default: {
 					return ( actual[key] === expected[key] )
 						? SAME
-						: DIFFERENT;
+						: DIFFERENT("Values did not match ("+actual[key]+" !== "+expected[key]+")");
 				}
 			}
 		}) ) { // actual == expected
@@ -378,6 +391,27 @@ void (function TestAPI(_global) {
 		function( state, message ) {
 			var passed = state; // just for consistency with other assertions
 			return unitTestResult.call(this, passed, state, true, message, "ok");
+		}
+	);
+
+	makeConst( UnitTest.prototype, "hasFunction",
+		function( context, key, paramCount ) {
+			// note: 'passed' determined in several stages...
+			
+			var msg = key+" is defined"; // primary assertion
+			var passed = ( context.hasOwnProperty(key) );
+			
+			if (passed) {
+				msg = key+"() is a function"; // secondary assertion
+				passed = ( typeOf(context[key]) == "function" );
+			}
+			
+			if (passed && paramCount != null) { // tertiary assertion
+				msg = key+"("+(new Array(context[key].length))+") has "+paramCount+" formal pamrameters";
+				passed = context[key].length == paramCount;
+			}
+			
+			return unitTestResult.call(this, passed, context[key].length, paramCount, msg, "hasFunction");
 		}
 	);
 

@@ -86,7 +86,7 @@ void (function TestTest(_global) {
 		}
 	);
 
-	Test("Test Assertions", Test.EXPECT( 14 ), function() {
+	Test("Test Assertions", Test.EXPECT( 16 ), function() {
 		REQUIRE( "Test Namespace" );
 
 		ok( true, "ok( )" );
@@ -109,6 +109,8 @@ void (function TestTest(_global) {
 		notSimilarTo( {a:5, b:1, c:3, d:2}, {d:Test.NOT_FOUND}, "notSimilarTo( ) #3" );
 		
 		hasNative( "Math", "hasNative( )" );
+		hasFunction( _global, "Test" );
+		hasFunction( _global, "Test", 4 );
 		
 		comment( "This should not count as a result" );
 		// which would cause test to fail as Test.EXPECT( 8 )
