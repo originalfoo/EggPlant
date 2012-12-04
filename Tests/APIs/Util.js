@@ -331,6 +331,82 @@ void (function TestUtil() {
 		if ( ok( out.hasOwnProperty("DEFAULT"), "out.DEFAULT defined" ) ) comment( "out.DEFAULT == '"+out.DEFAULT+"'" );
 	});
 
+	Test("out() invocation with out.CHAT", Test.EXPECT( 1 ), function() {
+		REQUIRE( "out() constants" );
+
+		comment( "Currently unable to test if the message is actually sent" );
+
+		out("test", self, out.CHAT);
+		
+		ok( true, "It didn't crash" );
+	});
+
+	Test("out() invocation with out.CONSOLE", Test.EXPECT( 1 ), function() {
+		REQUIRE( "out() constants" );
+
+		comment( "Currently unable to test if the message is actually sent" );
+
+		out("test", self, out.CONSOLE);
+		
+		ok( true, "It didn't crash" );
+	});
+
+	Test("out() invocation with out.DEBUG", Test.EXPECT( 1 ), function() {
+		REQUIRE( "out() constants" );
+
+		comment( "Currently unable to test if the message is actually sent" );
+
+		out("test", self, out.DEBUG);
+		
+		ok( true, "It didn't crash" );
+	});
+
+	Test("out() invocation with out.DEFAULT", Test.EXPECT( 1 ), function() {
+		REQUIRE( "out() constants" );
+
+		comment( "Currently unable to test if the message is actually sent" );
+
+		out("test", self, out.DEFAULT);
+		
+		ok( true, "It didn't crash" );
+	});
+
+	Test("out() invocation with out.ERROR", Test.EXPECT( 2 ), function() {
+		REQUIRE( "out() constants" );
+
+		try {
+			out("test", self, out.ERROR);
+			ok( false, "out.ERROR method throws an error" );
+		} catch(e) {
+			ok( true, "out.ERROR method throws an error" );
+		}
+		
+		try {
+			out("test", self, out.ERROR, TypeError);
+			ok( false, "out.ERROR method with config throws a TypeError" );
+		} catch(e) {
+			ok( e instanceof TypeError, "out.ERROR method with config throws a TypeError" );
+		}
+	});
+
+	Test("out() invocation with out.HOST", Test.EXPECT( 1 ), function() {
+		REQUIRE( "out() constants" );
+
+		comment( "Currently unable to test if the message is actually sent" );
+
+		out("test", self, out.HOST);
+		
+		ok( true, "It didn't crash" );
+	});
+
+	Test("out() invocation with out.RETURN", Test.EXPECT( 1 ), function() {
+		REQUIRE( "out() constants" );
+
+		var actual = out("test", self, out.RETURN).join("; ");
+		
+		equal( actual, "["+self.file+" v"+self.ver+"]; test" , "Returned expected value" );
+	});
+
 	Test("global property", Test.EXPECT( 2 ), function() {
 		if ( hasNative( "global" ) ) equal( global, _global, "Points to global object" );
 	});
@@ -489,7 +565,7 @@ void (function TestUtil() {
 		var klass = function Klass() {
 			ok( true, "Class constructor invoked" );
 			
-			var ping = this["super"]("ping");
+			var ping = this["super"]("ping"); // pls excuse weird syntax, it's due to eval parse error :s
 			equal( ping, "pong", "Superclass constructor return value received" );
 		}
 		
@@ -498,7 +574,7 @@ void (function TestUtil() {
 		klass.prototype.foo = function() {
 			ok ( true, "Class .foo() invoked" );
 			
-			var ping = this["super"]("ping");
+			var ping = this["super"]("ping"); // pls excuse weird syntax, it's due to eval parse error :s
 			equal( ping, "pong", "Superclass .foo() return value received" );
 		}
 		
